@@ -28,8 +28,9 @@ function proxiedHlsUrl(req: Request, url: string, ref?: string): string {
   return `${publicBase(req)}/api/proxy/hls?url=${encodeURIComponent(url)}${refParam}`;
 }
 
-function proxiedVideoUrl(req: Request, url: string): string {
-  return `${publicBase(req)}/api/proxy/video?url=${encodeURIComponent(url)}`;
+function proxiedVideoUrl(req: Request, url: string, ref?: string): string {
+  const refParam = ref ? `&ref=${encodeURIComponent(ref)}` : '';
+  return `${publicBase(req)}/api/proxy/video?url=${encodeURIComponent(url)}${refParam}`;
 }
 
 function proxiedSubtitleUrl(req: Request, url: string, ref?: string): string {
@@ -547,6 +548,7 @@ router.get('/proxy/subtitle', async (req: Request, res: Response) => {
 
 router.get('/proxy/video', async (req: Request, res: Response) => {
   const url = req.query.url as string | undefined;
+  const ref = req.query.ref as string | undefined;
   if (!url) return res.status(400).json({ error: 'Missing ?url=' });
   if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: '?url must be absolute http(s)' });
 
@@ -557,8 +559,8 @@ router.get('/proxy/video', async (req: Request, res: Response) => {
       headers: {
         'User-Agent': 'Mozilla/5.0',
         'Accept': '*/*',
-        'Referer': 'https://animeheaven.me/',
-        'Origin': 'https://animeheaven.me',
+        'Referer': ref || 'https://animeheaven.me/',
+        ...(ref ? { 'Origin': new URL(ref).origin } : { 'Origin': 'https://animeheaven.me' }),
         ...(req.headers.range ? { Range: req.headers.range } : {}),
       },
       validateStatus: (status) => (status >= 200 && status < 300) || status === 206,
